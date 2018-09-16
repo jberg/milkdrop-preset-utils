@@ -468,152 +468,6 @@ export function prepareShader (shader) {
   return fullShader;
 }
 
-export function prepareShaderNoDefine (shader) {
-  if (shader.length === 0) {
-    return '';
-  }
-
-  let shaderFixed = _.replace(shader, 'sampler sampler_pw_noise_lq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_lq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler sampler_pw_noise_hq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_hq;\n', '');
-
-  const shaderParts = getShaderParts(shaderFixed);
-  const fullShader =
-  `const float M_PI = 3.14159265359;
-   const float M_PI_2 = 6.28318530718;
-   const float M_INV_PI_2 = 0.159154943091895;
-   uniform sampler2D sampler_main;
-   uniform sampler2D sampler_fw_main;
-   uniform sampler2D sampler_pw_main;
-   uniform sampler2D sampler_fc_main;
-   uniform sampler2D sampler_pc_main;
-   uniform sampler2D sampler_noise_lq;
-   uniform sampler2D sampler_noise_lq_lite;
-   uniform sampler2D sampler_noise_mq;
-   uniform sampler2D sampler_noise_hq;
-   uniform sampler3D sampler_noisevol_lq;
-   uniform sampler3D sampler_noisevol_hq;
-   uniform sampler2D sampler_pw_noise_lq;
-   uniform sampler2D sampler_blur1;
-   uniform sampler2D sampler_blur2;
-   uniform sampler2D sampler_blur3;
-   float4 texsize_noise_lq;
-   float4 texsize_noise_mq;
-   float4 texsize_noise_hq;
-   float4 texsize_noise_lq_lite;
-   float4 texsize_noisevol_lq;
-   float4 texsize_noisevol_hq;
-   float4 _qa;
-   float4 _qb;
-   float4 _qc;
-   float4 _qd;
-   float4 _qe;
-   float4 _qf;
-   float4 _qg;
-   float4 _qh;
-   float q1;
-   float q2;
-   float q3;
-   float q4;
-   float q5;
-   float q6;
-   float q7;
-   float q8;
-   float q9;
-   float q10;
-   float q11;
-   float q12;
-   float q13;
-   float q14;
-   float q15;
-   float q16;
-   float q17;
-   float q18;
-   float q19;
-   float q20;
-   float q21;
-   float q22;
-   float q23;
-   float q24;
-   float q25;
-   float q26;
-   float q27;
-   float q28;
-   float q29;
-   float q30;
-   float q31;
-   float q32;
-   float blur1_min;
-   float blur1_max;
-   float blur2_min;
-   float blur2_max;
-   float blur3_min;
-   float blur3_max;
-   float scale1;
-   float scale2;
-   float scale3;
-   float bias1;
-   float bias2;
-   float bias3;
-   float4 slow_roam_cos;
-   float4 roam_cos;
-   float4 slow_roam_sin;
-   float4 roam_sin;
-   float3 hue_shader;
-   float time;
-   float4 rand_preset;
-   float4 rand_frame;
-   float  progress;
-   float  frame;
-   float  fps;
-   float  decay;
-   float  bass;
-   float  mid;
-   float  treb;
-   float  vol;
-   float  bass_att;
-   float  mid_att;
-   float  treb_att;
-   float  vol_att;
-   float4 texsize;
-   float4 aspect;
-   float rad;
-   float ang;
-   float2 uv_orig;
-   float3 lum(float3 v){
-     return float3(dot(v, float3(0.32,0.49,0.29)));
-   }
-   float3 GetMain (float2 uv) {
-     return tex2D(sampler_main,uv).xyz;
-   }
-   float3 GetPixel (float2 uv) {
-     return tex2D(sampler_main,uv).xyz;
-   }
-   float3 GetBlur1 (float2 uv) {
-     return tex2D(sampler_blur1,uv).xyz * scale1 + bias1;
-   }
-   float3 GetBlur2 (float2 uv) {
-     return tex2D(sampler_blur2,uv).xyz * scale2 + bias2;
-   }
-   float3 GetBlur3 (float2 uv) {
-     return tex2D(sampler_blur3,uv).xyz * scale3 + bias3;
-   }
-
-   ${_.replace(shaderParts[0], 'sampler sampler_', 'sampler2D sampler_')}
-
-   float4 shader_body (float2 uv : TEXCOORD0) : COLOR0
-   {
-       float3 ret;
-
-       ${shaderParts[1]}
-
-       return float4(ret, 1.0);
-   }`;
-
-  return fullShader;
-}
-
 function isUserSampler (line) {
   if (!_.startsWith(line, 'uniform sampler')) {
     return false;
@@ -644,6 +498,118 @@ function isUserSampler (line) {
   }
 
   return false;
+}
+
+const hlslUniformsString = `vec4 texsize_noise_lq;
+vec4 texsize_noise_mq;
+vec4 texsize_noise_hq;
+vec4 texsize_noise_lq_lite;
+vec4 texsize_noisevol_lq;
+vec4 texsize_noisevol_hq;
+vec4 _qa;
+vec4 _qb;
+vec4 _qc;
+vec4 _qd;
+vec4 _qe;
+vec4 _qf;
+vec4 _qg;
+vec4 _qh;
+float q1;
+float q2;
+float q3;
+float q4;
+float q5;
+float q6;
+float q7;
+float q8;
+float q9;
+float q10;
+float q11;
+float q12;
+float q13;
+float q14;
+float q15;
+float q16;
+float q17;
+float q18;
+float q19;
+float q20;
+float q21;
+float q22;
+float q23;
+float q24;
+float q25;
+float q26;
+float q27;
+float q28;
+float q29;
+float q30;
+float q31;
+float q32;
+float blur1_min;
+float blur1_max;
+float blur2_min;
+float blur2_max;
+float blur3_min;
+float blur3_max;
+float scale1;
+float scale2;
+float scale3;
+float bias1;
+float bias2;
+float bias3;
+vec4 slow_roam_cos;
+vec4 roam_cos;
+vec4 slow_roam_sin;
+vec4 roam_sin;
+vec3 hue_shader;
+float time;
+vec4 rand_preset;
+vec4 rand_frame;
+float progress;
+float frame;
+float fps;
+float decay;
+float bass;
+float mid;
+float treb;
+float vol;
+float bass_att;
+float mid_att;
+float treb_att;
+float vol_att;
+vec4 texsize;
+vec4 aspect;
+float rad;
+float ang;
+vec2 uv_orig;
+`;
+
+export function processUnOptimizedShader (shader) {
+  if (_.isEmpty(shader)) {
+    return '';
+  }
+
+  let processedShader = shader.replace(/#version 300 es\sprecision highp float;/, '');
+  processedShader = processedShader.replace('in vec2 frag_TEXCOORD0;\n', '');
+  processedShader = processedShader.replace('out vec4 rast_FragData[1];\n', '');
+  processedShader = processedShader.replace(/vec2 uv;\s+uv = frag_TEXCOORD0;\n\s{4}/, '');
+  processedShader = processedShader.replace(/void main\(\)\s\{\s/, 'shader_body {\n');
+  processedShader = processedShader.replace('rast_FragData[0] = result;', 'ret = result.rgb;');
+
+  const shaderParts = getShaderParts(processedShader);
+  let fragShaderHeaderText = shaderParts[0];
+  const fragShaderText = shaderParts[1];
+
+  fragShaderHeaderText = fragShaderHeaderText.replace(hlslUniformsString, '');
+  const shaderHeaderLines = _.split(fragShaderHeaderText, '\n');
+  const fileredHeaderLines = _.filter(shaderHeaderLines,
+                                      (line) => !(_.startsWith(line, 'in') ||
+                                                 (_.startsWith(line, 'uniform') &&
+                                                  !isUserSampler(line))));
+  fragShaderHeaderText = _.join(fileredHeaderLines, '\n');
+
+  return `${fragShaderHeaderText} shader_body { ${fragShaderText} }`;
 }
 
 export function processOptimizedShader (shader) {
