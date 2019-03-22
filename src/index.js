@@ -468,6 +468,212 @@ export function prepareShader (shader) {
   return fullShader;
 }
 
+function findEndParen (str) {
+  const commaIdx = str.indexOf(',');
+  const texture = str.substring(0, commaIdx);
+  const afterTexture = str.substring(commaIdx + 1);
+
+  let parenCount = 0;
+  let lastParenIdx;
+  for (let i = 0; i < afterTexture.length; i++) {
+    if (afterTexture.charAt(i) === '(') {
+      parenCount += 1;
+    } else if (afterTexture.charAt(i) === ')') {
+      parenCount -= 1;
+    }
+
+    if (parenCount === -1) {
+      lastParenIdx = i;
+      break;
+    }
+  }
+
+  const uv = afterTexture.substring(0, lastParenIdx);
+
+  return {
+    endParenIdx: commaIdx + 1 + lastParenIdx,
+    texture,
+    uv
+  };
+}
+
+function convertTextureLookups (shader, texType) {
+  let convertedShader = shader;
+  while (convertedShader.indexOf(texType) > -1) {
+    const shaderStartIdx = convertedShader.indexOf(texType);
+    const afterTextureIdx = shaderStartIdx + texType.length;
+    const stringAfter = convertedShader.substring(afterTextureIdx);
+    const afterFirstParenIdx = stringAfter.indexOf('(') + 1;
+    const indisdeShaderLookup = stringAfter.substring(afterFirstParenIdx);
+    const { endParenIdx, texture, uv } = findEndParen(indisdeShaderLookup);
+
+    /* eslint-disable prefer-template, max-len */
+    convertedShader =
+      convertedShader.substring(0, shaderStartIdx) +
+      `${texture}.Sample(pointSampler, ${uv})` +
+      convertedShader.substring(afterTextureIdx + afterFirstParenIdx + (endParenIdx + 1), convertedShader.length);
+    /* eslint-enable prefer-template, max-len */
+  }
+
+  return convertedShader;
+}
+
+export function prepareShaderForDX11 (shader) {
+  if (shader.length === 0) {
+    return '';
+  }
+
+  let shaderFixed = convertTextureLookups(shader, 'tex2D');
+  shaderFixed = convertTextureLookups(shaderFixed, 'tex3D');
+  shaderFixed = _.replace(shaderFixed, 'sampler sampler_pw_noise_lq;\n', '');
+  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_lq;\n', '');
+  shaderFixed = _.replace(shaderFixed, 'sampler sampler_pw_noise_hq;\n', '');
+  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_hq;\n', '');
+
+  const shaderParts = getShaderParts(shaderFixed);
+  const fullShader =
+  `#define  M_PI   3.14159265359
+   #define  M_PI_2 6.28318530718
+   #define  M_INV_PI_2  0.159154943091895
+
+   SamplerState pointSampler : register(s0);
+
+   Texture2D sampler_main : register(t0);
+   Texture2D sampler_fw_main : register(t1);
+   Texture2D sampler_pw_main : register(t2);
+   Texture2D sampler_fc_main : register(t3);
+   Texture2D sampler_pc_main : register(t4);
+
+   Texture2D sampler_noise_lq : register(t5);
+   Texture2D sampler_noise_lq_lite : register(t6);
+   Texture2D sampler_noise_mq : register(t7);
+   Texture2D sampler_noise_hq : register(t8);
+
+   Texture3D sampler_noisevol_lq : register(t9);
+   Texture3D sampler_noisevol_hq : register(t10);
+
+   Texture2D sampler_pw_noise_lq : register(t11);
+
+   Texture2D sampler_blur1 : register(t12);
+   Texture2D sampler_blur2 : register(t13);
+   Texture2D sampler_blur3 : register(t14);
+
+   float4 texsize_noise_lq;
+   float4 texsize_noise_mq;
+   float4 texsize_noise_hq;
+   float4 texsize_noise_lq_lite;
+   float4 texsize_noisevol_lq;
+   float4 texsize_noisevol_hq;
+
+   float4 _qa;
+   float4 _qb;
+   float4 _qc;
+   float4 _qd;
+   float4 _qe;
+   float4 _qf;
+   float4 _qg;
+   float4 _qh;
+
+   float q1;
+   float q2;
+   float q3;
+   float q4;
+   float q5;
+   float q6;
+   float q7;
+   float q8;
+   float q9;
+   float q10;
+   float q11;
+   float q12;
+   float q13;
+   float q14;
+   float q15;
+   float q16;
+   float q17;
+   float q18;
+   float q19;
+   float q20;
+   float q21;
+   float q22;
+   float q23;
+   float q24;
+   float q25;
+   float q26;
+   float q27;
+   float q28;
+   float q29;
+   float q30;
+   float q31;
+   float q32;
+
+   float blur1_min;
+   float blur1_max;
+   float blur2_min;
+   float blur2_max;
+   float blur3_min;
+   float blur3_max;
+
+   float scale1;
+   float scale2;
+   float scale3;
+   float bias1;
+   float bias2;
+   float bias3;
+
+   float4 slow_roam_cos;
+   float4 roam_cos;
+   float4 slow_roam_sin;
+   float4 roam_sin;
+
+   float3 hue_shader;
+
+   float time;
+   float4 rand_preset;
+   float4 rand_frame;
+   float  progress;
+   float  frame;
+   float  fps;
+   float  decay;
+   float  bass;
+   float  mid;
+   float  treb;
+   float  vol;
+   float  bass_att;
+   float  mid_att;
+   float  treb_att;
+   float  vol_att;
+   float4 texsize;
+   float4 aspect;
+
+   float rad;
+   float ang;
+   float2 uv_orig;
+
+   #define GetMain(uv) (sampler_main.Sample(pointSampler,uv).xyz)
+   #define GetPixel(uv) (sampler_main.Sample(pointSampler,uv).xyz)
+   #define GetBlur1(uv) (sampler_blur1.Sample(pointSampler,uv).xyz*scale1 + bias1)
+   #define GetBlur2(uv) (sampler_blur2.Sample(pointSampler,uv).xyz*scale2 + bias2)
+   #define GetBlur3(uv) (sampler_blur3.Sample(pointSampler,uv).xyz*scale3 + bias3)
+
+   #define lum(x) (dot(x,float3(0.32,0.49,0.29)))
+   #define tex2d tex2D
+   #define tex3d tex3D
+
+   ${_.replace(shaderParts[0], 'sampler sampler_', 'sampler2D sampler_')}
+
+   float3 shader_body (float2 uv : TEXCOORD0) : SV_Target
+   {
+       float3 ret;
+
+       ${shaderParts[1]}
+
+       return ret;
+   }`;
+
+  return fullShader;
+}
+
 function isUserSampler (line) {
   if (!_.startsWith(line, 'uniform sampler')) {
     return false;
@@ -651,6 +857,60 @@ export function processOptimizedShader (shader) {
     return false;
   });
   fragShaderText = _.join(shaderBodyLines, ';');
+
+  return `${fragShaderHeaderText} shader_body { ${fragShaderText} }`;
+}
+
+export function processDX11ConvertedShader (shader) {
+  if (_.isEmpty(shader)) {
+    return '';
+  }
+
+  const globalStartIdx = shader.indexOf('layout(std140) uniform type_Globals');
+  const globalEndIdx = shader.indexOf('} _Globals;');
+
+  let processedShader = shader.substring(0, globalStartIdx) + shader.substring(globalEndIdx + 13);
+
+  processedShader = processedShader
+    .replace('#version 300 es\n', '')
+    .replace('precision mediump float;\n', '')
+    .replace('precision highp int;\n', '')
+    .replace('layout(location = 0) out highp vec3 out_var_SV_Target;\n', '')
+    .replace('void main()', 'shader_body');
+  processedShader = _.replace(processedShader, /highp\s*/g, '');
+  processedShader = _.replace(processedShader, /medp\s*/g, '');
+  processedShader = _.replace(processedShader, /lowp\s*/g, '');
+  processedShader = _.replace(processedShader, /_Globals\./g, '');
+  processedShader = _.replace(processedShader, /in_var_TEXCOORD0/g, 'uv');
+  processedShader = _.replace(processedShader, 'out_var_SV_Target =', 'ret =');
+
+  const shaderParts = getShaderParts(processedShader);
+  let fragShaderHeaderText = shaderParts[0];
+  let fragShaderText = shaderParts[1];
+
+  const shaderHeaderLines = _.split(fragShaderHeaderText, '\n');
+  const fileredHeaderLines = _.filter(shaderHeaderLines,
+                                      (line) => !(_.startsWith(line, 'in') ||
+                                                 (_.startsWith(line, 'uniform') &&
+                                                  !isUserSampler(line))));
+  fragShaderHeaderText = _.join(fileredHeaderLines, '\n');
+
+  fragShaderText = fragShaderText
+    .replace(/SPIRV_Cross_Combinedsampler_mainpointSampler/g, 'sampler_main')
+    .replace(/SPIRV_Cross_Combinedsampler_fw_mainpointSampler/g, 'sampler_fw_main')
+    .replace(/SPIRV_Cross_Combinedsampler_pw_mainpointSampler/g, 'sampler_pw_main')
+    .replace(/SPIRV_Cross_Combinedsampler_fc_mainpointSampler/g, 'sampler_fc_main')
+    .replace(/SPIRV_Cross_Combinedsampler_pc_mainpointSampler/g, 'sampler_pc_main')
+    .replace(/SPIRV_Cross_Combinedsampler_noise_lqpointSampler/g, 'sampler_noise_lq')
+    .replace(/SPIRV_Cross_Combinedsampler_noise_lq_litepointSampler/g, 'sampler_noise_lq_lite')
+    .replace(/SPIRV_Cross_Combinedsampler_noise_mqpointSampler/g, 'sampler_noise_mq')
+    .replace(/SPIRV_Cross_Combinedsampler_noise_hqpointSampler/g, 'sampler_noise_hq')
+    .replace(/SPIRV_Cross_Combinedsampler_noisevol_lqpointSampler/g, 'sampler_noisevol_lq')
+    .replace(/SPIRV_Cross_Combinedsampler_noisevol_hqpointSampler/g, 'sampler_noisevol_hq')
+    .replace(/SPIRV_Cross_Combinedsampler_pw_noise_lqpointSampler/g, 'sampler_pw_noise_lq')
+    .replace(/SPIRV_Cross_Combinedsampler_blur1pointSampler/g, 'sampler_blur1')
+    .replace(/SPIRV_Cross_Combinedsampler_blur2pointSampler/g, 'sampler_blur2')
+    .replace(/SPIRV_Cross_Combinedsampler_blur3pointSampler/g, 'sampler_blur3');
 
   return `${fragShaderHeaderText} shader_body { ${fragShaderText} }`;
 }
