@@ -468,26 +468,29 @@ export function prepareShader (shader) {
   return fullShader;
 }
 
-function findEndParen (str) {
-  const commaIdx = str.indexOf(',');
-  const texture = str.substring(0, commaIdx);
-  const afterTexture = str.substring(commaIdx + 1);
-
-  let parenCount = 0;
-  let lastParenIdx;
-  for (let i = 0; i < afterTexture.length; i++) {
-    if (afterTexture.charAt(i) === '(') {
-      parenCount += 1;
-    } else if (afterTexture.charAt(i) === ')') {
-      parenCount -= 1;
+function parseUntilUnmatched (str, openChar, closeChar) {
+  let charCount = 0;
+  let i;
+  for (i = 0; i < str.length; i++) {
+    if (str.charAt(i) === openChar) {
+      charCount += 1;
+    } else if (str.charAt(i) === closeChar) {
+      charCount -= 1;
     }
 
-    if (parenCount === -1) {
-      lastParenIdx = i;
+    if (charCount === -1) {
       break;
     }
   }
 
+  return i;
+}
+
+function findEndParen (str) {
+  const commaIdx = str.indexOf(',');
+  const texture = str.substring(0, commaIdx);
+  const afterTexture = str.substring(commaIdx + 1);
+  const lastParenIdx = parseUntilUnmatched(afterTexture, '(', ')');
   const uv = afterTexture.substring(0, lastParenIdx);
 
   return {
@@ -518,6 +521,47 @@ function convertTextureLookups (shader, texType) {
   return convertedShader;
 }
 
+function getShaderConstants (shaderLines) {
+  const checkFn = (line) => (
+    _.startsWith(line, 'static') ||
+    _.startsWith(line, 'const') ||
+    _.startsWith(line, 'sampler') ||
+    _.startsWith(line, '#define')
+  );
+  const constantLines = _.filter(shaderLines, checkFn);
+  const linesWithoutConstants = _.filter(shaderLines, (line) => !checkFn(line));
+
+  return { constantLines, linesWithoutConstants };
+}
+
+function getShaderFunctions (shaderLines) {
+  const functionLines = [];
+  const linesWithoutFunctions = [];
+  for (let i = 0; i < shaderLines.length;) {
+    const line = shaderLines[i];
+    if (line.indexOf('{') > -1) {
+      const remainingLines = shaderLines.slice(i);
+      const remainingStr = _.join(remainingLines, '\n');
+      const afterFirstBraceIdx = remainingStr.indexOf('{') + 1;
+      const afterBrace = remainingStr.substring(afterFirstBraceIdx);
+      const lastBraceIdx = parseUntilUnmatched(afterBrace, '{', '}');
+      const functionLen = afterFirstBraceIdx + lastBraceIdx + 1;
+      let linesCharCount = 0;
+      while (linesCharCount < functionLen) {
+        const innerLine = shaderLines[i];
+        functionLines.push(innerLine);
+        linesCharCount += innerLine.length + 1; // +1 for the trimmed \n
+        i += 1;
+      }
+    } else {
+      linesWithoutFunctions.push(line);
+      i += 1;
+    }
+  }
+
+  return { functionLines, linesWithoutFunctions };
+}
+
 export function prepareShaderForDX11 (shader) {
   if (shader.length === 0) {
     return '';
@@ -531,6 +575,24 @@ export function prepareShaderForDX11 (shader) {
   shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_hq;\n', '');
 
   const shaderParts = getShaderParts(shaderFixed);
+  let fragShaderHeaderText = shaderParts[0];
+  let fragShaderText = shaderParts[1];
+
+  const shaderHeaderLines = _.split(fragShaderHeaderText, '\n');
+
+  const { constantLines, linesWithoutConstants } = getShaderConstants(shaderHeaderLines);
+  const { functionLines, linesWithoutFunctions } = getShaderFunctions(linesWithoutConstants);
+
+  fragShaderHeaderText = `
+    ${_.join(constantLines, '\n')}
+    ${_.join(functionLines, '\n')}
+  `;
+  fragShaderText = `
+    ${_.join(linesWithoutFunctions, '\n')}
+    ${fragShaderText}
+  `;
+
+
   const fullShader =
   `#define  M_PI   3.14159265359
    #define  M_PI_2 6.28318530718
@@ -543,6 +605,11 @@ export function prepareShaderForDX11 (shader) {
    Texture2D sampler_pw_main : register(t2);
    Texture2D sampler_fc_main : register(t3);
    Texture2D sampler_pc_main : register(t4);
+
+   #define sampler_FC_main sampler_fc_main
+   #define sampler_PC_main sampler_pc_main
+   #define sampler_FW_main sampler_fw_main
+   #define sampler_PW_main sampler_pw_main
 
    Texture2D sampler_noise_lq : register(t5);
    Texture2D sampler_noise_lq_lite : register(t6);
@@ -660,13 +727,13 @@ export function prepareShaderForDX11 (shader) {
    #define tex2d tex2D
    #define tex3d tex3D
 
-   ${_.replace(shaderParts[0], 'sampler sampler_', 'sampler2D sampler_')}
+   ${fragShaderHeaderText}
 
    float3 shader_body (float2 uv : TEXCOORD0) : SV_Target
    {
        float3 ret;
 
-       ${shaderParts[1]}
+       ${fragShaderText}
 
        return ret;
    }`;
@@ -869,7 +936,12 @@ export function processDX11ConvertedShader (shader) {
   const globalStartIdx = shader.indexOf('layout(std140) uniform type_Globals');
   const globalEndIdx = shader.indexOf('} _Globals;');
 
-  let processedShader = shader.substring(0, globalStartIdx) + shader.substring(globalEndIdx + 13);
+  let processedShader;
+  if (globalStartIdx > -1) {
+    processedShader = shader.substring(0, globalStartIdx) + shader.substring(globalEndIdx + 13);
+  } else {
+    processedShader = shader;
+  }
 
   processedShader = processedShader
     .replace('#version 300 es\n', '')
