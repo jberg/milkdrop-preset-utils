@@ -567,7 +567,13 @@ export function prepareShaderForDX11 (shader) {
     return '';
   }
 
-  let shaderFixed = convertTextureLookups(shader, 'tex2D');
+  let shaderFixed = _.replace(shader, /tex2d/g, 'tex2D');
+  shaderFixed = _.replace(shaderFixed, /tex3d/g, 'tex3D');
+  shaderFixed = _.replace(shaderFixed, /sampler_FC_main/g, 'sampler_fc_main');
+  shaderFixed = _.replace(shaderFixed, /sampler_PC_main/g, 'sampler_pc_main');
+  shaderFixed = _.replace(shaderFixed, /sampler_FW_main/g, 'sampler_fw_main');
+  shaderFixed = _.replace(shaderFixed, /sampler_PW_main/g, 'sampler_pw_main');
+  shaderFixed = convertTextureLookups(shaderFixed, 'tex2D');
   shaderFixed = convertTextureLookups(shaderFixed, 'tex3D');
   shaderFixed = _.replace(shaderFixed, 'sampler sampler_pw_noise_lq;\n', '');
   shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_lq;\n', '');
@@ -605,11 +611,6 @@ export function prepareShaderForDX11 (shader) {
    Texture2D sampler_pw_main : register(t2);
    Texture2D sampler_fc_main : register(t3);
    Texture2D sampler_pc_main : register(t4);
-
-   #define sampler_FC_main sampler_fc_main
-   #define sampler_PC_main sampler_pc_main
-   #define sampler_FW_main sampler_fw_main
-   #define sampler_PW_main sampler_pw_main
 
    Texture2D sampler_noise_lq : register(t5);
    Texture2D sampler_noise_lq_lite : register(t6);
@@ -724,8 +725,6 @@ export function prepareShaderForDX11 (shader) {
    #define GetBlur3(uv) (sampler_blur3.Sample(pointSampler,uv).xyz*scale3 + bias3)
 
    #define lum(x) (dot(x,float3(0.32,0.49,0.29)))
-   #define tex2d tex2D
-   #define tex3d tex3D
 
    ${fragShaderHeaderText}
 
