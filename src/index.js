@@ -122,7 +122,9 @@ function removeBaseValDefaults (baseVals, defaultVals) {
       baseValsNonDefault[k] = v;
     }
   });
-  baseValsNonDefault.enabled = baseVals.enabled;
+  if (Object.prototype.hasOwnProperty.call(baseVals, 'enabled')) {
+    baseValsNonDefault.enabled = baseVals.enabled;
+  }
 
   return baseValsNonDefault;
 }
