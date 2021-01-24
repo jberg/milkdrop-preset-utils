@@ -1,7 +1,5 @@
 /*global __dirname, require, module*/
 
-const webpack = require("webpack");
-const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
 const path = require("path");
 const env = require("yargs").argv.env;
 
@@ -9,7 +7,6 @@ const srcRoot = path.join(__dirname, "..", "src");
 const nodeRoot = path.join(__dirname, "..", "node_modules");
 const outputPath = path.join(__dirname, "..", "dist");
 
-let plugins = [];
 let outputFile = "milkdrop-preset-utils";
 
 if (env === "prod") {
@@ -18,14 +15,15 @@ if (env === "prod") {
 
 let config = {
   entry: srcRoot + "/index.js",
+  mode: "development",
   devtool: "source-map",
-  target: "web",
   output: {
     path: outputPath,
     filename: outputFile + ".js",
     library: "milkdropPresetUtils",
     libraryTarget: "umd",
     umdNamedDefine: true,
+    globalObject: "this",
   },
   module: {
     rules: [
@@ -33,10 +31,11 @@ let config = {
         test: /(\.js)$/,
         exclude: /node_modules/,
         use: {
-          loader: "babel-loader?cacheDirectory",
+          loader: "babel-loader",
           options: {
-            plugins: ["transform-runtime"],
-            presets: ["env"],
+            presets: ["@babel/preset-env"],
+            plugins: ["@babel/plugin-transform-runtime"],
+            sourceType: "unambiguous",
           },
         },
       },
@@ -58,18 +57,7 @@ let config = {
 };
 
 if (env === "prod") {
-  config.plugins.push(
-    new webpack.NoEmitOnErrorsPlugin(),
-    new webpack.DefinePlugin({
-      "process.env": {
-        NODE_ENV: JSON.stringify("production"),
-      },
-    }),
-    new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.optimize.ModuleConcatenationPlugin(),
-
-    new UglifyJsPlugin({ parallel: true })
-  );
+  config.mode = "production";
 }
 
 module.exports = config;
