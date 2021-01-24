@@ -221,7 +221,9 @@ function getVersion(text) {
 
 export function splitPreset(text) {
   const presetVersion = getVersion(text);
-  const presetParts = splitOutBaseVals(text);
+  let mainPresetText = _.split(text, "[preset00]")[1];
+  mainPresetText = _.replace(mainPresetText, /\r\n/g, "\n");
+  const presetParts = splitOutBaseVals(mainPresetText);
   const baseValLines = _.split(presetParts[0], "\n");
   const presetLines = _.split(presetParts[1], "\n");
 
