@@ -1,5 +1,5 @@
-import _ from 'lodash';
-import { varMap } from './constants';
+import _ from "lodash";
+import { varMap } from "./constants";
 
 const baseValsDefaults = {
   decay: 0.98,
@@ -115,51 +115,54 @@ const waveBaseValsDefaults = {
   additive: 0,
 };
 
-function removeBaseValDefaults (baseVals, defaultVals) {
+function removeBaseValDefaults(baseVals, defaultVals) {
   const baseValsNonDefault = {};
   _.forEach(baseVals, (v, k) => {
     if (v !== defaultVals[k]) {
       baseValsNonDefault[k] = v;
     }
   });
-  if (Object.prototype.hasOwnProperty.call(baseVals, 'enabled')) {
+  if (Object.prototype.hasOwnProperty.call(baseVals, "enabled")) {
     baseValsNonDefault.enabled = baseVals.enabled;
   }
 
   return baseValsNonDefault;
 }
 
-function getLinesWithPrefix (lines, prefix) {
+function getLinesWithPrefix(lines, prefix) {
   const regex = new RegExp(`${prefix}_\\d+=\`*`);
   const filteredLines = _.filter(lines, (line) => regex.test(line));
-  return _.join(_.map(filteredLines, (line) => _.last(_.split(line, regex))), '\n');
+  return _.join(
+    _.map(filteredLines, (line) => _.last(_.split(line, regex))),
+    "\n"
+  );
 }
 
-function getWarpShader (lines) {
-  return getLinesWithPrefix(lines, 'warp');
+function getWarpShader(lines) {
+  return getLinesWithPrefix(lines, "warp");
 }
 
-function getCompShader (lines) {
-  return getLinesWithPrefix(lines, 'comp');
+function getCompShader(lines) {
+  return getLinesWithPrefix(lines, "comp");
 }
 
-function getPresetInit (lines) {
-  return getLinesWithPrefix(lines, 'per_frame_init');
+function getPresetInit(lines) {
+  return getLinesWithPrefix(lines, "per_frame_init");
 }
 
-function getPerFrame (lines) {
-  return getLinesWithPrefix(lines, 'per_frame');
+function getPerFrame(lines) {
+  return getLinesWithPrefix(lines, "per_frame");
 }
 
-function getPerVetex (lines) {
-  return getLinesWithPrefix(lines, 'per_pixel');
+function getPerVetex(lines) {
+  return getLinesWithPrefix(lines, "per_pixel");
 }
 
-function getBaseVals (lines) {
+function getBaseVals(lines) {
   const baseVals = {};
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const splitLine = _.split(line, '=');
+    const splitLine = _.split(line, "=");
     if (splitLine.length > 1) {
       const varName = splitLine[0].toLowerCase();
       const convertedVarName = varMap[varName];
@@ -169,47 +172,63 @@ function getBaseVals (lines) {
   return baseVals;
 }
 
-function isNonBaseVal (line) {
-  return _.startsWith(line, 'per_frame_init') ||
-         _.startsWith(line, 'per_frame') ||
-         _.startsWith(line, 'per_frame_pixel') ||
-         _.startsWith(line, 'wavecode') ||
-         _.startsWith(line, 'shapecode') ||
-         _.startsWith(line, 'warp_1') ||
-         _.startsWith(line, 'comp_1');
+function isNonBaseVal(line) {
+  return (
+    _.startsWith(line, "per_frame_init") ||
+    _.startsWith(line, "per_frame") ||
+    _.startsWith(line, "per_frame_pixel") ||
+    _.startsWith(line, "wavecode") ||
+    _.startsWith(line, "shapecode") ||
+    _.startsWith(line, "warp_1") ||
+    _.startsWith(line, "comp_1")
+  );
 }
 
-function splitOutBaseVals (text) {
-  const lines = _.split(text, '\n');
+function splitOutBaseVals(text) {
+  const lines = _.split(text, "\n");
   return [
-    _.join(_.takeWhile(lines, (line) => !isNonBaseVal(line)), '\n'),
-    _.join(_.dropWhile(lines, (line) => !isNonBaseVal(line)), '\n')
+    _.join(
+      _.takeWhile(lines, (line) => !isNonBaseVal(line)),
+      "\n"
+    ),
+    _.join(
+      _.dropWhile(lines, (line) => !isNonBaseVal(line)),
+      "\n"
+    ),
   ];
 }
 
-function getWaveOrShapeEQs (lines, prefix) {
+function getWaveOrShapeEQs(lines, prefix) {
   const regex = new RegExp(`${prefix}\\d+=`);
   const filteredLines = _.filter(lines, (line) => regex.test(line));
-  return _.join(_.map(filteredLines, (line) => _.last(_.split(line, regex))), '\n');
+  return _.join(
+    _.map(filteredLines, (line) => _.last(_.split(line, regex))),
+    "\n"
+  );
 }
 
-function getWaveOrShapeBaseVals (lines, prefix) {
+function getWaveOrShapeBaseVals(lines, prefix) {
   const filteredLines = _.filter(lines, (line) => _.startsWith(line, prefix));
-  const trimmedLines = _.map(filteredLines, (line) => _.replace(line, prefix, ''));
+  const trimmedLines = _.map(filteredLines, (line) =>
+    _.replace(line, prefix, "")
+  );
   return getBaseVals(trimmedLines);
 }
 
-function getVersion (text) {
-  return _.includes(text, 'MILKDROP_PRESET_VERSION=201') ? 2 : 1;
+function getVersion(text) {
+  return _.includes(text, "MILKDROP_PRESET_VERSION=201") ? 2 : 1;
 }
 
-export function splitPreset (text) {
+export function splitPreset(text) {
   const presetVersion = getVersion(text);
   const presetParts = splitOutBaseVals(text);
-  const baseValLines = _.split(presetParts[0], '\n');
-  const presetLines = _.split(presetParts[1], '\n');
+  const baseValLines = _.split(presetParts[0], "\n");
+  const presetLines = _.split(presetParts[1], "\n");
 
-  const baseVals = removeBaseValDefaults(getBaseVals(baseValLines), baseValsDefaults);
+  const baseVals = removeBaseValDefaults(
+    getBaseVals(baseValLines),
+    baseValsDefaults
+  );
   const warp = getWarpShader(presetLines);
   const comp = getCompShader(presetLines);
   const presetInit = getPresetInit(presetLines);
@@ -222,7 +241,10 @@ export function splitPreset (text) {
     const shapeInitPrefix = `shape_${i}_init`;
     const shapePerFramePrefix = `shape_${i}_per_frame`;
 
-    let shapeBaseVals = getWaveOrShapeBaseVals(presetLines, shapeBaseValsPrefix);
+    let shapeBaseVals = getWaveOrShapeBaseVals(
+      presetLines,
+      shapeBaseValsPrefix
+    );
     shapeBaseVals = removeBaseValDefaults(shapeBaseVals, shapeBaseValsDefaults);
 
     if (shapeBaseVals.enabled) {
@@ -267,22 +289,34 @@ export function splitPreset (text) {
     waves,
     shapes,
     warp,
-    comp
+    comp,
   };
 }
 
-export function createBasePresetFuns (parsedPreset, shapes, waves) {
+export function createBasePresetFuns(parsedPreset, shapes, waves) {
   const presetMap = { shapes: [], waves: [] };
-  presetMap.init_eqs_str = parsedPreset.perFrameInitEQs ? parsedPreset.perFrameInitEQs.trim() : '';
-  presetMap.frame_eqs_str = parsedPreset.perFrameEQs ? parsedPreset.perFrameEQs.trim() : '';
-  presetMap.pixel_eqs_str = parsedPreset.perPixelEQs ? parsedPreset.perPixelEQs.trim() : '';
+  presetMap.init_eqs_str = parsedPreset.perFrameInitEQs
+    ? parsedPreset.perFrameInitEQs.trim()
+    : "";
+  presetMap.frame_eqs_str = parsedPreset.perFrameEQs
+    ? parsedPreset.perFrameEQs.trim()
+    : "";
+  presetMap.pixel_eqs_str = parsedPreset.perPixelEQs
+    ? parsedPreset.perPixelEQs.trim()
+    : "";
 
   for (let i = 0; i < parsedPreset.shapes.length; i++) {
     if (shapes[i].baseVals.enabled !== 0) {
-      presetMap.shapes.push(_.assign({}, shapes[i], {
-        init_eqs_str: parsedPreset.shapes[i].perFrameInitEQs ? parsedPreset.shapes[i].perFrameInitEQs : '',
-        frame_eqs_str: parsedPreset.shapes[i].perFrameEQs ? parsedPreset.shapes[i].perFrameEQs : '',
-      }));
+      presetMap.shapes.push(
+        _.assign({}, shapes[i], {
+          init_eqs_str: parsedPreset.shapes[i].perFrameInitEQs
+            ? parsedPreset.shapes[i].perFrameInitEQs
+            : "",
+          frame_eqs_str: parsedPreset.shapes[i].perFrameEQs
+            ? parsedPreset.shapes[i].perFrameEQs
+            : "",
+        })
+      );
     } else {
       presetMap.shapes.push(shapes[i]);
     }
@@ -290,11 +324,19 @@ export function createBasePresetFuns (parsedPreset, shapes, waves) {
 
   for (let i = 0; i < parsedPreset.waves.length; i++) {
     if (waves[i].baseVals.enabled !== 0) {
-      presetMap.waves.push(_.assign({}, waves[i], {
-        init_eqs_str: parsedPreset.waves[i].perFrameInitEQs ? parsedPreset.waves[i].perFrameInitEQs : '',
-        frame_eqs_str: parsedPreset.waves[i].perFrameEQs ? parsedPreset.waves[i].perFrameEQs : '',
-        point_eqs_str: parsedPreset.waves[i].perPointEQs ? parsedPreset.waves[i].perPointEQs : '',
-      }));
+      presetMap.waves.push(
+        _.assign({}, waves[i], {
+          init_eqs_str: parsedPreset.waves[i].perFrameInitEQs
+            ? parsedPreset.waves[i].perFrameInitEQs
+            : "",
+          frame_eqs_str: parsedPreset.waves[i].perFrameEQs
+            ? parsedPreset.waves[i].perFrameEQs
+            : "",
+          point_eqs_str: parsedPreset.waves[i].perPointEQs
+            ? parsedPreset.waves[i].perPointEQs
+            : "",
+        })
+      );
     } else {
       presetMap.waves.push(waves[i]);
     }
@@ -305,33 +347,32 @@ export function createBasePresetFuns (parsedPreset, shapes, waves) {
 
 // Shader Utils
 
-export function getShaderParts (t) {
-  const sbIndex = t.indexOf('shader_body');
+export function getShaderParts(t) {
+  const sbIndex = t.indexOf("shader_body");
   if (t && sbIndex > -1) {
     const beforeShaderBody = t.substring(0, sbIndex);
     const afterShaderBody = t.substring(sbIndex);
-    const firstCurly = afterShaderBody.indexOf('{');
-    const lastCurly = afterShaderBody.lastIndexOf('}');
+    const firstCurly = afterShaderBody.indexOf("{");
+    const lastCurly = afterShaderBody.lastIndexOf("}");
     const shaderBody = afterShaderBody.substring(firstCurly + 1, lastCurly);
     return [beforeShaderBody, shaderBody];
   }
 
-  return ['', t];
+  return ["", t];
 }
 
-export function prepareShader (shader) {
+export function prepareShader(shader) {
   if (shader.length === 0) {
-    return '';
+    return "";
   }
 
-  let shaderFixed = _.replace(shader, 'sampler sampler_pw_noise_lq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_lq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler sampler_pw_noise_hq;\n', '');
-  shaderFixed = _.replace(shaderFixed, 'sampler2D sampler_pw_noise_hq;\n', '');
+  let shaderFixed = _.replace(shader, "sampler sampler_pw_noise_lq;\n", "");
+  shaderFixed = _.replace(shaderFixed, "sampler2D sampler_pw_noise_lq;\n", "");
+  shaderFixed = _.replace(shaderFixed, "sampler sampler_pw_noise_hq;\n", "");
+  shaderFixed = _.replace(shaderFixed, "sampler2D sampler_pw_noise_hq;\n", "");
 
   const shaderParts = getShaderParts(shaderFixed);
-  const fullShader =
-  `#define  M_PI   3.14159265359
+  const fullShader = `#define  M_PI   3.14159265359
    #define  M_PI_2 6.28318530718
    #define  M_INV_PI_2  0.159154943091895
 
@@ -456,7 +497,7 @@ export function prepareShader (shader) {
    #define tex2d tex2D
    #define tex3d tex3D
 
-   ${_.replace(shaderParts[0], 'sampler sampler_', 'sampler2D sampler_')}
+   ${_.replace(shaderParts[0], "sampler sampler_", "sampler2D sampler_")}
 
    float4 shader_body (float2 uv : TEXCOORD0) : COLOR0
    {
@@ -470,27 +511,27 @@ export function prepareShader (shader) {
   return fullShader;
 }
 
-function isUserSampler (line) {
-  if (!_.startsWith(line, 'uniform sampler')) {
+function isUserSampler(line) {
+  if (!_.startsWith(line, "uniform sampler")) {
     return false;
   }
 
   const builtinSamplers = [
-    'sampler_main',
-    'sampler_fw_main',
-    'sampler_pw_main',
-    'sampler_fc_main',
-    'sampler_pc_main',
-    'sampler_noise_lq',
-    'sampler_noise_lq_lite',
-    'sampler_noise_mq',
-    'sampler_noise_hq',
-    'sampler_pw_noise_lq',
-    'sampler_noisevol_lq',
-    'sampler_noisevol_hq',
-    'sampler_blur1',
-    'sampler_blur2',
-    'sampler_blur3'
+    "sampler_main",
+    "sampler_fw_main",
+    "sampler_pw_main",
+    "sampler_fc_main",
+    "sampler_pc_main",
+    "sampler_noise_lq",
+    "sampler_noise_lq_lite",
+    "sampler_noise_mq",
+    "sampler_noise_hq",
+    "sampler_pw_noise_lq",
+    "sampler_noisevol_lq",
+    "sampler_noisevol_hq",
+    "sampler_blur1",
+    "sampler_blur2",
+    "sampler_blur3",
   ];
 
   const re = /uniform sampler2D sampler_(.+);$/;
@@ -587,72 +628,102 @@ float ang;
 vec2 uv_orig;
 `;
 
-export function processUnOptimizedShader (shader) {
+export function processUnOptimizedShader(shader) {
   if (_.isEmpty(shader)) {
-    return '';
+    return "";
   }
 
-  let processedShader = shader.replace(/#version 300 es\sprecision highp float;/, '');
-  processedShader = processedShader.replace('in vec2 frag_TEXCOORD0;\n', '');
-  processedShader = processedShader.replace('out vec4 rast_FragData[1];\n', '');
-  processedShader = processedShader.replace(/vec2 uv;\s+uv = frag_TEXCOORD0;\n\s{4}/, '');
-  processedShader = processedShader.replace(/void main\(\)\s\{\s/, 'shader_body {\n');
-  processedShader = processedShader.replace('rast_FragData[0] = result;', 'ret = result.rgb;');
+  let processedShader = shader.replace(
+    /#version 300 es\sprecision highp float;/,
+    ""
+  );
+  processedShader = processedShader.replace("in vec2 frag_TEXCOORD0;\n", "");
+  processedShader = processedShader.replace("out vec4 rast_FragData[1];\n", "");
+  processedShader = processedShader.replace(
+    /vec2 uv;\s+uv = frag_TEXCOORD0;\n\s{4}/,
+    ""
+  );
+  processedShader = processedShader.replace(
+    /void main\(\)\s\{\s/,
+    "shader_body {\n"
+  );
+  processedShader = processedShader.replace(
+    "rast_FragData[0] = result;",
+    "ret = result.rgb;"
+  );
 
   const shaderParts = getShaderParts(processedShader);
   let fragShaderHeaderText = shaderParts[0];
   const fragShaderText = shaderParts[1];
 
-  fragShaderHeaderText = fragShaderHeaderText.replace(hlslUniformsString, '');
-  const shaderHeaderLines = _.split(fragShaderHeaderText, '\n');
-  const fileredHeaderLines = _.filter(shaderHeaderLines,
-                                      (line) => !(_.startsWith(line, 'in') ||
-                                                 (_.startsWith(line, 'uniform') &&
-                                                  !isUserSampler(line))));
-  fragShaderHeaderText = _.join(fileredHeaderLines, '\n');
+  fragShaderHeaderText = fragShaderHeaderText.replace(hlslUniformsString, "");
+  const shaderHeaderLines = _.split(fragShaderHeaderText, "\n");
+  const fileredHeaderLines = _.filter(
+    shaderHeaderLines,
+    (line) =>
+      !(
+        _.startsWith(line, "in") ||
+        (_.startsWith(line, "uniform") && !isUserSampler(line))
+      )
+  );
+  fragShaderHeaderText = _.join(fileredHeaderLines, "\n");
 
   return `${fragShaderHeaderText} shader_body { ${fragShaderText} }`;
 }
 
-export function processOptimizedShader (shader) {
+export function processOptimizedShader(shader) {
   if (_.isEmpty(shader)) {
-    return '';
+    return "";
   }
 
-  let processedShader = _.replace(shader, '#version 300 es\n', '');
-  processedShader = _.replace(processedShader, 'void main ()', 'shader_body');
-  processedShader = _.replace(processedShader, /highp\s*/g, '');
-  processedShader = _.replace(processedShader, /medp\s*/g, '');
-  processedShader = _.replace(processedShader, /lowp\s*/g, '');
-  processedShader = _.replace(processedShader, /xlv_TEXCOORD0/g, 'uv');
-  processedShader = _.replace(processedShader,
-                              /_glesFragData\[0\] = (.+);\n\}/,
-                              (match, varName) => `ret = ${varName}.xyz;\n}`);
-  processedShader = _.replace(processedShader, 'out vec4 _glesFragData[4];\n', '');
+  let processedShader = _.replace(shader, "#version 300 es\n", "");
+  processedShader = _.replace(processedShader, "void main ()", "shader_body");
+  processedShader = _.replace(processedShader, /highp\s*/g, "");
+  processedShader = _.replace(processedShader, /medp\s*/g, "");
+  processedShader = _.replace(processedShader, /lowp\s*/g, "");
+  processedShader = _.replace(processedShader, /xlv_TEXCOORD0/g, "uv");
+  processedShader = _.replace(
+    processedShader,
+    /_glesFragData\[0\] = (.+);\n\}/,
+    (match, varName) => `ret = ${varName}.xyz;\n}`
+  );
+  processedShader = _.replace(
+    processedShader,
+    "out vec4 _glesFragData[4];\n",
+    ""
+  );
 
   const shaderParts = getShaderParts(processedShader);
   let fragShaderHeaderText = shaderParts[0];
   let fragShaderText = shaderParts[1];
 
-  const shaderHeaderLines = _.split(fragShaderHeaderText, '\n');
-  const fileredHeaderLines = _.filter(shaderHeaderLines,
-                                      (line) => !(_.startsWith(line, 'in') ||
-                                                 (_.startsWith(line, 'uniform') &&
-                                                  !isUserSampler(line))));
-  fragShaderHeaderText = _.join(fileredHeaderLines, '\n');
+  const shaderHeaderLines = _.split(fragShaderHeaderText, "\n");
+  const fileredHeaderLines = _.filter(
+    shaderHeaderLines,
+    (line) =>
+      !(
+        _.startsWith(line, "in") ||
+        (_.startsWith(line, "uniform") && !isUserSampler(line))
+      )
+  );
+  fragShaderHeaderText = _.join(fileredHeaderLines, "\n");
 
-  let shaderBodyLines = _.split(fragShaderText, ';');
+  let shaderBodyLines = _.split(fragShaderText, ";");
   shaderBodyLines = _.dropWhile(shaderBodyLines, (line) => {
     const trimmedLine = _.trim(line);
-    if (_.startsWith(trimmedLine, 'xlat_mutable')) {
+    if (_.startsWith(trimmedLine, "xlat_mutable")) {
       const matches = trimmedLine.match(/xlat_mutable(.+)\s*=\s*(.+)/);
-      if (matches && matches.length === 3 && _.trim(matches[1]) === _.trim(matches[2])) {
+      if (
+        matches &&
+        matches.length === 3 &&
+        _.trim(matches[1]) === _.trim(matches[2])
+      ) {
         return true;
       }
     }
     return false;
   });
-  fragShaderText = _.join(shaderBodyLines, ';');
+  fragShaderText = _.join(shaderBodyLines, ";");
 
   return `${fragShaderHeaderText} shader_body { ${fragShaderText} }`;
 }
