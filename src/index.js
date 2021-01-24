@@ -249,15 +249,11 @@ export function splitPreset(text) {
     );
     shapeBaseVals = removeBaseValDefaults(shapeBaseVals, shapeBaseValsDefaults);
 
-    if (shapeBaseVals.enabled) {
-      shapes.push({
-        baseVals: shapeBaseVals,
-        init_eqs_str: getWaveOrShapeEQs(presetLines, shapeInitPrefix),
-        frame_eqs_str: getWaveOrShapeEQs(presetLines, shapePerFramePrefix),
-      });
-    } else {
-      shapes.push({ baseVals: { enabled: 0 } });
-    }
+    shapes.push({
+      baseVals: shapeBaseVals,
+      init_eqs_str: getWaveOrShapeEQs(presetLines, shapeInitPrefix),
+      frame_eqs_str: getWaveOrShapeEQs(presetLines, shapePerFramePrefix),
+    });
   }
 
   const waves = [];
@@ -270,16 +266,12 @@ export function splitPreset(text) {
     let waveBaseVals = getWaveOrShapeBaseVals(presetLines, waveBaseValsPrefix);
     waveBaseVals = removeBaseValDefaults(waveBaseVals, waveBaseValsDefaults);
 
-    if (waveBaseVals.enabled !== 0) {
-      waves.push({
-        baseVals: waveBaseVals,
-        init_eqs_str: getWaveOrShapeEQs(presetLines, waveInitPrefix),
-        frame_eqs_str: getWaveOrShapeEQs(presetLines, wavePerFramePrefix),
-        point_eqs_str: getWaveOrShapeEQs(presetLines, wavePerPointPrefix),
-      });
-    } else {
-      waves.push({ baseVals: { enabled: 0 } });
-    }
+    waves.push({
+      baseVals: waveBaseVals,
+      init_eqs_str: getWaveOrShapeEQs(presetLines, waveInitPrefix),
+      frame_eqs_str: getWaveOrShapeEQs(presetLines, wavePerFramePrefix),
+      point_eqs_str: getWaveOrShapeEQs(presetLines, wavePerPointPrefix),
+    });
   }
 
   return {
